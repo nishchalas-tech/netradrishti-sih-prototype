@@ -27,24 +27,24 @@ Thumbs.db
 *.db
 *.sqlite
 *.sqlite3
-
-# Generated outputs
+data/
 outputs/
 results/
 runs/
 
-# Large ML files
-*.pth
-*.pt
-*.ckpt
+# Local uploads / generated images
+uploads/
+demo_cases/capture_*.png
+demo_cases/temp_*.png
 
 # Local environment/secrets
 .env
 .env.*
+*.key
+*.pem
+credentials.json
+secrets.json
 
-# Runtime case state
-data/cases_queue.json
-
-# Runtime/demo captures
-demo_cases/capture_*.png
-demo_cases/temp_*.png
+# Large ML files
+*.pt
+*.ckpt
