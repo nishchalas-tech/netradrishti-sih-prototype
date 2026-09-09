@@ -207,7 +207,7 @@ netradrishti/
 
 ### Step 1: Navigate to Project Directory
 ```bash
-cd "C:\Users\NISHCHAL A S\.gemini\antigravity\scratch\netradrishti"
+cd netradrishti-sih-prototype
 ```
 
 ### Step 2: Install Dependencies
@@ -261,3 +261,4 @@ The enterprise FastAPI server provides clean, asynchronous REST endpoints:
 
 **Developed for Smart India Hackathon 2026**
 *Advancing rural healthcare equity through Explainable AI.*
+
