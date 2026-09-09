@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Temporary/generated files
+*.tmp
+*.temp
+
+# Runtime/state files
+*.db
+*.sqlite
+*.sqlite3
+
+# Generated outputs
+outputs/
+results/
+runs/
+
+# Large ML files
+*.pth
+*.pt
+*.ckpt
+
+# Local environment/secrets
+.env
+.env.*
+
+# Runtime case state
+data/cases_queue.json
+
+# Runtime/demo captures
+demo_cases/capture_*.png
+demo_cases/temp_*.png

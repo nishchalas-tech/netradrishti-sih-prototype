@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NETRADRISHTI | Explainable AI for Diabetic Retinopathy | SIH 2026</title>
+    <link rel="stylesheet" href="/static/css/clinical_theme.css">
+    <script src="/static/js/chart.min.js"></script>
+</head>
+<body>
+
+    <!-- Institutional Header -->
+    <header class="inst-header">
+        <div class="inst-header-content">
+            <div class="brand-section">
+                <div class="brand-emblem">👁️</div>
+                <div>
+                    <div class="brand-title">
+                        <span>NETRADRISHTI</span>
+                        <span class="badge-sih">SIH 2026 • SIH26038</span>
+                    </div>
+                    <div class="brand-sub">
+                        Explainable AI for Diabetic Retinopathy Screening in Rural India | Research Prototype
+                    </div>
+                </div>
+            </div>
+            <div class="header-right">
+                <button class="btn-presentation" onclick="togglePresentationMode()" id="btn-pres-toggle">
+                    🖥️ PRESENTATION MODE
+                </button>
+                <div class="header-status-group">
+                    <div id="system-status-indicator" class="status-indicator">
+                        <span>●</span> <span id="system-status-text">INITIALIZING...</span>
+                    </div>
+                    <div style="margin-top:4px; font-size:0.78rem;">Primary Health Centre (PHC) Tele-Triage</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Global Pipeline Indicator (01 → 09) -->
+    <div class="pipeline-indicator">
+        <div class="pipeline-inner" id="pipeline-bar">
+            <div class="pipeline-step" id="pipe-1">
+                <div class="pipeline-step-num">01</div>
+                <div class="pipeline-step-label">IMAGE</div>
+            </div>
+            <div class="pipeline-arrow">→</div>
+            <div class="pipeline-step" id="pipe-2">
+                <div class="pipeline-step-num">02</div>
+                <div class="pipeline-step-label">QUALITY GATE</div>
+            </div>
+            <div class="pipeline-arrow">→</div>
+            <div class="pipeline-step" id="pipe-3">
+                <div class="pipeline-step-num">03</div>
+                <div class="pipeline-step-label">ENHANCEMENT</div>
+            </div>
+            <div class="pipeline-arrow">→</div>
+            <div class="pipeline-step" id="pipe-4">
+                <div class="pipeline-step-num">04</div>
+                <div class="pipeline-step-label">RETINAL ANALYSIS</div>
+            </div>
+            <div class="pipeline-arrow">→</div>
+            <div class="pipeline-step" id="pipe-5">
+                <div class="pipeline-step-num">05</div>
+                <div class="pipeline-step-label">DR GRADING</div>
+            </div>
+            <div class="pipeline-arrow">→</div>
+            <div class="pipeline-step" id="pipe-6">
+                <div class="pipeline-step-num">06</div>
+                <div class="pipeline-step-label">EXPLAINABILITY</div>
+            </div>
+            <div class="pipeline-arrow">→</div>
+            <div class="pipeline-step" id="pipe-7">
+                <div class="pipeline-step-num">07</div>
+                <div class="pipeline-step-label">TRIAGE</div>
+            </div>
+            <div class="pipeline-arrow">→</div>
+            <div class="pipeline-step" id="pipe-8">
+                <div class="pipeline-step-num">08</div>
+                <div class="pipeline-step-label">DOCTOR REVIEW</div>
+            </div>
+            <div class="pipeline-arrow">→</div>
+            <div class="pipeline-step" id="pipe-9">
+                <div class="pipeline-step-num">09</div>
+                <div class="pipeline-step-label">RESOURCE SIM</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hackathon 60-Second Demo Bar -->
+    <section class="demo-bar">
+        <div class="demo-bar-inner">
+            <div class="demo-label">
+                <span>⚡ HACKATHON DEMO MODE:</span>
+                <span style="font-weight:500; font-size:0.8rem; color:#64748b;">(Click a case to evaluate full pipeline in 60 seconds)</span>
+            </div>
+            <div class="demo-buttons">
+                <button class="btn-demo btn-demo-case1" onclick="loadDemoCase('case001')">
+                    🔴 Case 001: Poor Quality (Ungradable)
+                </button>
+                <button class="btn-demo btn-demo-case2" onclick="loadDemoCase('case002')">
+                    🔵 Case 002: Good Quality (Non-Referable)
+                </button>
+                <button class="btn-demo btn-demo-case3" onclick="loadDemoCase('case003')">
+                    🔥 Case 003: Referable DR (High Priority)
+                </button>
+                <button class="btn-demo btn-demo-reset" onclick="resetForm()">
+                    🔄 Clear / Manual Upload
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Navigation Bar -->
+    <nav class="nav-bar">
+        <div class="nav-tabs">
+            <div class="nav-tab active" id="tab-rural" onclick="switchTab('RURAL CLINIC')">
+                <span>🏥</span> RURAL CLINIC (PHC)
+            </div>
+            <div class="nav-tab" id="tab-doctor" onclick="switchTab('DOCTOR REVIEW')">
+                <span>👨‍⚕️</span> OPHTHALMOLOGIST REVIEW
+                <span id="queue-badge-counter" style="background:#fee2e2; color:#991b1b; padding:1px 6px; border-radius:10px; font-size:0.75rem; margin-left:4px;">0</span>
+            </div>
+            <div class="nav-tab" id="tab-sim" onclick="switchTab('SIMULATION')">
+                <span>📊</span> RESOURCE SIMULATION
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Application Container -->
+    <main class="app-container">
+
+        <!-- ============================================================= -->
+        <!-- SCREEN 1: RURAL CLINIC (PHC WORKSTATION)                      -->
+        <!-- ============================================================= -->
+        <section id="screen-rural" class="screen-view active">
+            <div class="card" style="border-left:4px solid var(--blue-clinical); margin-bottom:20px;">
+                <div style="font-size:1.12rem; font-weight:700; color:var(--navy-dark);">Rural Health Worker Screening Terminal</div>
+                <div style="font-size:0.87rem; color:var(--text-secondary); margin-top:3px;">
+                    Designed for Primary Health Centres (PHC) and Community Health Centres (CHC). Evaluates fundus camera gradability before AI classification.
+                </div>
+            </div>
+
+            <div class="grid-rural">
+                <!-- LEFT: Patient Form & Image Acquisition -->
+                <div>
+                    <div class="card">
+                        <div class="card-title">1. Patient Registration</div>
+                        <div class="form-group">
+                            <label class="form-label" for="pat-id">Patient ID / Aadhaar Reference</label>
+                            <input type="text" id="pat-id" class="form-input" value="PAT-RUR-7419">
+                        </div>
+                        <div class="grid-2">
+                            <div class="form-group">
+                                <label class="form-label" for="pat-age">Age (Years)</label>
+                                <input type="number" id="pat-age" class="form-input" value="54" min="15" max="110">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="pat-gender">Gender</label>
+                                <select id="pat-gender" class="form-select">
+                                    <option>Female</option>
+                                    <option selected>Male</option>
+                                    <option>Other</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="pat-location">Screening Location</label>
+                            <input type="text" id="pat-location" class="form-input" value="PHC Kolar Block, Karnataka">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="pat-notes">Clinical Notes / Symptoms</label>
+                            <textarea id="pat-notes" class="form-textarea" rows="2">Type 2 Diabetes (6 yrs duration). Reports occasional blurred vision in right eye.</textarea>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-title">2. Fundus Image Acquisition</div>
+
+                        <div id="demo-indicator" style="display:none; background:#e0f2fe; border:1px solid #bae6fd; color:#0369a1; padding:7px 11px; border-radius:6px; font-size:0.84rem; margin-bottom:11px; font-weight:600;">
+                            📌 Demo Case Loaded: <span id="demo-case-title">None</span>
+                        </div>
+
+                        <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+                            <div class="drop-zone-icon">📷</div>
+                            <div style="font-weight:700; color:var(--navy-dark); font-size:0.94rem;">Click to Upload or Drag & Drop Scan</div>
+                            <div style="font-size:0.79rem; color:var(--text-muted); margin-top:3px;">Supported formats: JPG, PNG, DICOM-export</div>
+                            <input type="file" id="file-input" style="display:none;" accept="image/png,image/jpeg,image/jpg">
+                        </div>
+
+                        <!-- Preview -->
+                        <div class="preview-container">
+                            <img id="fundus-preview" class="preview-img" src="" alt="Awaiting Fundus Scan" style="display:none;">
+                            <div id="preview-placeholder" style="color:#64748b; font-size:0.87rem; text-align:center; padding:18px;">
+                                No fundus scan loaded.<br/>Upload an image or pick a demo case above.
+                            </div>
+                        </div>
+
+                        <div style="margin-top:14px; display:flex; gap:8px;">
+                            <button id="btn-check-quality" class="btn btn-primary btn-block" onclick="runQualityCheck()" disabled>
+                                🔍 CHECK IMAGE QUALITY
+                            </button>
+                            <button id="btn-enhance-image" class="btn btn-secondary" onclick="runImageEnhancement()" disabled title="Show preprocessing enhancement">
+                                🔬 ENHANCE
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RIGHT: Quality Gate & AI Results -->
+                <div>
+                    <!-- Quality Gate Card -->
+                    <div class="card">
+                        <div class="card-title">3. Automated Image Quality Gate</div>
+
+                        <div id="quality-gate-idle" style="padding:22px; text-align:center; color:var(--text-muted);">
+                            <div style="font-size:1.7rem; margin-bottom:7px;">⏳</div>
+                            <div>Awaiting image quality assessment. Load a fundus image and click <strong>CHECK IMAGE QUALITY</strong>.</div>
+                        </div>
+
+                        <!-- Ungradable Alert -->
+                        <div id="quality-ungradable" class="alert-ungradable" style="display:none;">
+                            <div class="alert-ungradable-title">⚠️ UNGRADABLE IMAGE — AI ANALYSIS BLOCKED</div>
+                            <div class="alert-ungradable-reason">
+                                Rejection Reason: <span id="ungradable-reason-text" style="text-decoration:underline;">Image too blurry</span>
+                            </div>
+                            <!-- Sub-checks table for ungradable -->
+                            <div id="subcheck-table-ungradable" style="margin-top:10px;"></div>
+                            <div class="alert-ungradable-action">
+                                👉 [RECAPTURE IMAGE] — Please re-acquire the fundus scan.
+                            </div>
+                            <div style="font-size:0.84rem; color:#b91c1c; margin-top:7px; font-weight:600;">
+                                ⛔ SAFETY LOCK: AI diagnosis is blocked for ungradable images to prevent medical misclassification.
+                            </div>
+                        </div>
+
+                        <!-- Accepted Alert -->
+                        <div id="quality-accepted" class="alert-accepted" style="display:none;">
+                            <div class="alert-accepted-title">✅ IMAGE ACCEPTED</div>
+                            <div class="alert-accepted-desc" id="accepted-desc-text">
+                                Focus, illumination, and retinal aperture verified. Image gradable for AI evaluation.
+                            </div>
+                            <!-- Sub-checks table for accepted -->
+                            <div id="subcheck-table-accepted" style="margin-top:10px;"></div>
+                        </div>
+
+                        <!-- Quality Metrics Breakdown -->
+                        <div id="quality-metrics-grid" class="grid-3" style="display:none; margin:14px 0;">
+                            <div class="mini-kpi">
+                                <div class="mini-kpi-val" id="kpi-quality-score">--</div>
+                                <div class="mini-kpi-lbl">Quality Score</div>
+                            </div>
+                            <div class="mini-kpi">
+                                <div class="mini-kpi-val" id="kpi-blur-score">--</div>
+                                <div class="mini-kpi-lbl">Focus (Laplacian)</div>
+                            </div>
+                            <div class="mini-kpi">
+                                <div class="mini-kpi-val" id="kpi-illum-score">--</div>
+                                <div class="mini-kpi-lbl">Luminance (0–255)</div>
+                            </div>
+                        </div>
+
+                        <!-- Image Enhancement Viewer (hidden until clicked) -->
+                        <div id="enhancement-section" style="display:none; border-top:1px solid var(--border-color); padding-top:14px; margin-top:6px;">
+                            <div style="font-size:0.87rem; font-weight:700; color:var(--navy-dark); margin-bottom:8px;">
+                                🔬 Image Enhancement Preview — CLAHE + Green-Channel + Unsharp Masking
+                                <span style="font-size:0.74rem; font-weight:500; color:var(--text-muted); margin-left:6px;">(Preprocessing demonstration — AI uses original image)</span>
+                            </div>
+                            <div class="enhancement-viewer">
+                                <div class="enh-pane">
+                                    <img id="enh-img-original" src="" alt="Original">
+                                    <div class="enh-pane-lbl">Original</div>
+                                </div>
+                                <div class="enh-pane">
+                                    <img id="enh-img-enhanced" src="" alt="Enhanced">
+                                    <div class="enh-pane-lbl">Enhanced</div>
+                                </div>
+                                <div class="enh-pane" id="enh-metrics-pane" style="background:#f8fafc;">
+                                    <div style="padding:10px; font-size:0.78rem; color:var(--text-secondary); text-align:left;" id="enh-metrics-text">
+                                        Metrics loading...
+                                    </div>
+                                    <div class="enh-pane-lbl">Enhancement Metrics</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Run AI Action -->
+                        <div id="ai-action-container" style="display:none; border-top:1px solid var(--border-color); padding-top:14px;">
+                            <button id="btn-run-ai" class="btn btn-success btn-block" style="font-size:1.04rem; padding:11px;" onclick="runAiScreening()">
+                                🚀 RUN AI SCREENING (NetraNet + Grad-CAM)
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- AI Screening Result Card -->
+                    <div id="ai-results-card" class="card" style="display:none;">
+                        <div class="card-title">
+                            <span>4. AI Screening Result & Explainability</span>
+                            <span id="case-id-badge" style="font-size:0.79rem; background:#f1f5f9; padding:2px 8px; border-radius:4px; font-family:monospace;">CASE-ID</span>
+                        </div>
+
+                        <!-- AI Prototype Notice -->
+                        <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:6px; padding:6px 12px; font-size:0.81rem; color:#1e3a8a; margin-bottom:12px; font-weight:600;">
+                            ⚠️ AI PROTOTYPE PREDICTION — Not a clinical diagnosis. Ophthalmologist review required before any medical decision.
+                        </div>
+
+                        <!-- Prediction Banner -->
+                        <div id="triage-banner" class="triage-box triage-referable">
+                            <div style="font-size:0.80rem; font-weight:800; text-transform:uppercase; letter-spacing:0.5px;" id="triage-type-lbl">
+                                AI Prototype Classification
+                            </div>
+                            <div class="triage-headline" id="triage-prediction-text">REFERABLE DR</div>
+                            <div style="font-size:0.93rem; font-weight:600;" id="triage-subtitle">High Risk of Diabetic Retinopathy Detected</div>
+                        </div>
+
+                        <!-- ICDR Scale -->
+                        <div style="font-size:0.84rem; font-weight:700; color:var(--navy-dark); margin-bottom:5px;">
+                            ICDR Grading Scale (Demo Label — Binary Model):
+                        </div>
+                        <div class="icdr-scale" id="icdr-scale-bar">
+                            <div class="icdr-level icdr-level-0" id="icdr-0">
+                                <span class="icdr-num">0</span>
+                                <span class="icdr-name">No DR</span>
+                            </div>
+                            <div class="icdr-level icdr-level-1" id="icdr-1">
+                                <span class="icdr-num">1</span>
+                                <span class="icdr-name">Mild NPDR</span>
+                            </div>
+                            <div class="icdr-level icdr-level-2" id="icdr-2">
+                                <span class="icdr-num">2</span>
+                                <span class="icdr-name">Moderate NPDR</span>
+                            </div>
+                            <div class="icdr-level icdr-level-3" id="icdr-3">
+                                <span class="icdr-num">3</span>
+                                <span class="icdr-name">Severe NPDR</span>
+                            </div>
+                            <div class="icdr-level icdr-level-4" id="icdr-4">
+                                <span class="icdr-num">4</span>
+                                <span class="icdr-name">PDR</span>
+                            </div>
+                        </div>
+                        <div id="icdr-label-text" style="font-size:0.82rem; color:var(--text-secondary); margin-bottom:12px; text-align:center; font-weight:600;">--</div>
+
+                        <div class="grid-3" style="margin-bottom:14px;">
+                            <div class="mini-kpi" style="border:2px solid #e2e8f0;">
+                                <div class="mini-kpi-val" id="model-conf-val" style="color:var(--blue-clinical);">99.3%</div>
+                                <div class="mini-kpi-lbl">Model Softmax Confidence</div>
+                            </div>
+                            <div class="mini-kpi" style="border:2px solid #e2e8f0;">
+                                <div class="mini-kpi-val" id="triage-priority-val" style="color:var(--crimson-dark);">HIGH PRIORITY</div>
+                                <div class="mini-kpi-lbl">Doctor Triage Priority</div>
+                            </div>
+                            <div class="mini-kpi" style="border:2px solid #e2e8f0;">
+                                <div class="mini-kpi-val" id="inference-latency-val" style="color:var(--text-secondary);">-- ms</div>
+                                <div class="mini-kpi-lbl">Inference Latency</div>
+                            </div>
+                        </div>
+
+                        <!-- 3-Way Grad-CAM Explainability -->
+                        <div style="font-size:0.87rem; font-weight:700; color:var(--navy-dark); margin-bottom:5px;">
+                            Grad-CAM — Model Attention Visualization (conv4 hook):
+                        </div>
+                        <div class="xai-viewport">
+                            <div class="xai-pane">
+                                <img id="xai-img-orig" src="" alt="Input Scan">
+                                <div class="xai-pane-lbl">1. Original Fundus</div>
+                            </div>
+                            <div class="xai-pane">
+                                <img id="xai-img-heatmap" src="" alt="Grad-CAM Heatmap">
+                                <div class="xai-pane-lbl">2. Grad-CAM Heatmap</div>
+                            </div>
+                            <div class="xai-pane">
+                                <img id="xai-img-overlay" src="" alt="Spatial Overlay">
+                                <div class="xai-pane-lbl">3. Spatial Attribution Overlay</div>
+                            </div>
+                        </div>
+
+                        <div class="evidence-quote" id="evidence-text-desc">
+                            Highlighted regions indicate areas that influenced the model prediction. Does not prove histological lesion presence.
+                        </div>
+
+                        <div style="margin-top:16px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                            <div style="font-size:0.84rem; font-weight:600; color:var(--text-secondary);">
+                                📍 Triaged to Tele-Ophthalmology Workstation
+                            </div>
+                            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                                <button id="btn-download-pdf" class="btn btn-secondary" onclick="downloadPdfReport()" style="font-size:0.83rem;">
+                                    📄 Download Screening Report (PDF)
+                                </button>
+                                <button class="btn btn-primary" onclick="switchTab('DOCTOR REVIEW')">
+                                    👉 View in Doctor Review Dashboard
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================= -->
+        <!-- SCREEN 2: OPHTHALMOLOGIST / DOCTOR REVIEW DASHBOARD           -->
+        <!-- ============================================================= -->
+        <section id="screen-doctor" class="screen-view">
+            <div class="card" style="border-left:4px solid var(--navy-accent); margin-bottom:18px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                    <div>
+                        <div style="font-size:1.2rem; font-weight:800; color:var(--navy-dark);">Tele-Ophthalmologist Review Station</div>
+                        <div style="font-size:0.87rem; color:var(--text-secondary);">
+                            District & Tertiary Hospital Clinical Verification Desk | Certified Medical Decision Authority
+                        </div>
+                    </div>
+                    <div style="background:#eff6ff; border:1px solid #bfdbfe; padding:5px 13px; border-radius:6px; font-size:0.84rem; font-weight:700; color:#1e3a8a;">
+                        👨‍⚕️ Ophthalmologist Review (Tele-Medicine Desk)
+                    </div>
+                </div>
+            </div>
+
+            <!-- Priority Queue Summary Stats -->
+            <div class="grid-4" style="margin-bottom:18px;">
+                <div class="telemetry-card" style="border-left:4px solid var(--crimson-primary);">
+                    <div class="telemetry-val" id="stat-high-count" style="color:var(--crimson-primary);">0</div>
+                    <div class="telemetry-lbl">🔴 High Priority (Referable)</div>
+                </div>
+                <div class="telemetry-card" style="border-left:4px solid var(--blue-clinical);">
+                    <div class="telemetry-val" id="stat-routine-count" style="color:var(--blue-clinical);">0</div>
+                    <div class="telemetry-lbl">🔵 Routine Follow-Up</div>
+                </div>
+                <div class="telemetry-card" style="border-left:4px solid var(--emerald-primary);">
+                    <div class="telemetry-val" id="stat-reviewed-count" style="color:var(--emerald-primary);">0</div>
+                    <div class="telemetry-lbl">✅ Decisions Finalized</div>
+                </div>
+                <div class="telemetry-card">
+                    <div class="telemetry-val" id="stat-total-count">0</div>
+                    <div class="telemetry-lbl">📋 Total Registered Cases</div>
+                </div>
+            </div>
+
+            <!-- Doctor Feedback Timeline -->
+            <div class="card" style="padding:14px 20px; margin-bottom:18px;">
+                <div style="font-size:0.85rem; font-weight:700; color:var(--navy-dark); margin-bottom:10px;">Review Workflow Progress</div>
+                <div class="feedback-timeline">
+                    <div class="timeline-step">
+                        <div class="timeline-dot done" id="tl-1">1</div>
+                        <div class="timeline-label">Case<br>Registered</div>
+                    </div>
+                    <div class="timeline-connector done" id="tl-c1"></div>
+                    <div class="timeline-step">
+                        <div class="timeline-dot done" id="tl-2">2</div>
+                        <div class="timeline-label">Quality<br>Check</div>
+                    </div>
+                    <div class="timeline-connector done" id="tl-c2"></div>
+                    <div class="timeline-step">
+                        <div class="timeline-dot done" id="tl-3">3</div>
+                        <div class="timeline-label">AI<br>Screening</div>
+                    </div>
+                    <div class="timeline-connector" id="tl-c3"></div>
+                    <div class="timeline-step">
+                        <div class="timeline-dot active" id="tl-4">4</div>
+                        <div class="timeline-label">Doctor<br>Review</div>
+                    </div>
+                    <div class="timeline-connector" id="tl-c4"></div>
+                    <div class="timeline-step">
+                        <div class="timeline-dot" id="tl-5">5</div>
+                        <div class="timeline-label">Decision<br>Recorded</div>
+                    </div>
+                    <div class="timeline-connector" id="tl-c5"></div>
+                    <div class="timeline-step">
+                        <div class="timeline-dot" id="tl-6">6</div>
+                        <div class="timeline-label">Referral /<br>Follow-Up</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3-Column Doctor Review Layout -->
+            <div class="grid-doctor-3col">
+
+                <!-- COLUMN 1: Priority Queue Selection -->
+                <div class="card" style="margin-bottom:0;">
+                    <div class="card-title" style="flex-direction:column; align-items:flex-start; gap:8px;">
+                        <span>Triage Priority Queue</span>
+                        <div style="display:flex; gap:5px; flex-wrap:wrap;">
+                            <button class="btn btn-secondary" style="padding:3px 9px; font-size:0.76rem;" onclick="filterQueue('all')">All</button>
+                            <button class="btn btn-secondary" style="padding:3px 9px; font-size:0.76rem;" onclick="filterQueue('HIGH PRIORITY')">🔴 High</button>
+                            <button class="btn btn-secondary" style="padding:3px 9px; font-size:0.76rem;" onclick="filterQueue('ROUTINE')">🔵 Routine</button>
+                            <button class="btn btn-secondary" style="padding:3px 9px; font-size:0.76rem;" onclick="filterQueue('PENDING')">⏳ Pending</button>
+                        </div>
+                    </div>
+
+                    <div style="max-height:520px; overflow-y:auto;">
+                        <table class="clinical-table">
+                            <thead>
+                                <tr>
+                                    <th>Case ID</th>
+                                    <th>Patient</th>
+                                    <th>Priority</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="queue-table-body">
+                                <tr>
+                                    <td colspan="4" style="text-align:center; color:var(--text-muted);">Loading patient queue...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- COLUMN 2: Fundus + Grad-CAM Viewer -->
+                <div class="card" style="margin-bottom:0;">
+                    <div class="card-title">
+                        <span>Retinal Imaging & Explainability</span>
+                        <span id="doc-case-badge" style="font-size:0.79rem; background:#f1f5f9; padding:2px 8px; border-radius:4px; font-family:monospace;">SELECT CASE</span>
+                    </div>
+
+                    <div id="doc-empty-state" style="padding:50px 20px; text-align:center; color:var(--text-muted);">
+                        <div style="font-size:2.3rem; margin-bottom:10px;">📑</div>
+                        <div style="font-size:0.98rem; font-weight:600;">No Patient Case Selected</div>
+                        <div style="font-size:0.84rem; margin-top:4px;">Select any row from the left triage queue to inspect imaging and Grad-CAM.</div>
+                    </div>
+
+                    <div id="doc-review-content" style="display:none;">
+                        <!-- Patient Demographics -->
+                        <div style="background:#f8fafc; border:1px solid var(--border-color); border-radius:6px; padding:10px 14px; margin-bottom:12px;">
+                            <div class="grid-3" style="font-size:0.87rem; gap:8px;">
+                                <div><strong>Patient ID:</strong> <span id="doc-pat-id">--</span></div>
+                                <div><strong>Age:</strong> <span id="doc-pat-age">--</span> yrs</div>
+                                <div><strong>Registered:</strong> <span id="doc-reg-time">--</span></div>
+                            </div>
+                            <div style="font-size:0.84rem; color:var(--text-secondary); margin-top:5px;">
+                                <strong>Clinic Notes:</strong> <span id="doc-pat-notes">--</span>
+                            </div>
+                        </div>
+
+                        <!-- Image Tab Bar -->
+                        <div class="img-tab-bar">
+                            <div class="img-tab active" id="img-tab-fundus" onclick="switchImgTab('fundus')">FUNDUS</div>
+                            <div class="img-tab" id="img-tab-heatmap" onclick="switchImgTab('heatmap')">GRAD-CAM HEATMAP</div>
+                            <div class="img-tab" id="img-tab-overlay" onclick="switchImgTab('overlay')">OVERLAY</div>
+                        </div>
+
+                        <!-- Image Viewer -->
+                        <div style="background:#1e293b; height:230px; border-radius:6px; overflow:hidden; display:flex; align-items:center; justify-content:center; border:1px solid var(--border-color); margin-bottom:12px;">
+                            <img id="doc-viewer-img" src="" alt="Retinal Image" style="max-height:100%; max-width:100%; object-fit:contain;">
+                        </div>
+
+                        <!-- Image Data Store (hidden) -->
+                        <div id="doc-img-store" data-fundus="" data-heatmap="" data-overlay=""></div>
+
+                        <!-- AI Metrics -->
+                        <div style="background:#f1f5f9; border-radius:6px; padding:9px 13px; font-size:0.87rem;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+                                <div><strong>AI Prototype Prediction:</strong> <span id="doc-ai-pred" style="font-weight:800;">--</span></div>
+                                <div><strong>Model Confidence:</strong> <span id="doc-ai-conf" style="font-weight:800; color:var(--blue-clinical);">--</span></div>
+                                <div><strong>Quality Score:</strong> <span id="doc-quality-score">--</span>/100</div>
+                            </div>
+                            <div id="doc-ai-evidence" style="margin-top:6px; font-size:0.82rem; color:var(--text-secondary); font-style:italic;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- COLUMN 3: AI Summary, Decision, PDF -->
+                <div class="card" style="margin-bottom:0;">
+                    <div class="card-title">⚖️ Clinical Decision Panel</div>
+
+                    <div id="doc-decision-panel-empty" style="padding:30px 10px; text-align:center; color:var(--text-muted); font-size:0.86rem;">
+                        Select a case to record a clinical decision.
+                    </div>
+
+                    <div id="doc-decision-panel" style="display:none;">
+                        <!-- Clinical Notice -->
+                        <div style="font-size:0.79rem; color:#b45309; background:#fffbeb; border:1px solid #fde68a; padding:6px 10px; border-radius:4px; margin-bottom:12px;">
+                            <strong>Clinical Notice:</strong> The final medical decision belongs strictly to the ophthalmologist. AI output is advisory only and does not constitute clinical diagnosis.
+                        </div>
+
+                        <!-- AI Summary Box -->
+                        <div style="background:#f8fafc; border:1px solid var(--border-color); border-radius:6px; padding:10px 13px; margin-bottom:12px;">
+                            <div style="font-size:0.82rem; font-weight:700; color:var(--navy-dark); margin-bottom:5px;">AI PROTOTYPE SUMMARY</div>
+                            <div style="font-size:0.84rem; color:var(--text-secondary);">
+                                Prediction: <strong id="doc-sum-pred">--</strong><br>
+                                Confidence: <strong id="doc-sum-conf" style="color:var(--blue-clinical);">--</strong><br>
+                                ICDR Demo Label: <strong id="doc-sum-icdr">--</strong>
+                            </div>
+                        </div>
+
+                        <!-- Decision Status Badge -->
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                            <div style="font-size:0.87rem; font-weight:700; color:var(--navy-dark);">Current Status:</div>
+                            <div id="decision-status-badge" style="font-size:0.77rem; font-weight:700; padding:2px 9px; border-radius:4px; background:#e2e8f0;">
+                                PENDING REVIEW
+                            </div>
+                        </div>
+
+                        <!-- Notes Input -->
+                        <div class="form-group">
+                            <label class="form-label" for="doc-notes-input">Clinical Observations / Referral Directive</label>
+                            <textarea id="doc-notes-input" class="form-textarea" rows="3" placeholder="Enter clinical notes, referral to tertiary center, or routine follow-up advice..."></textarea>
+                        </div>
+
+                        <!-- Decision Buttons -->
+                        <div style="display:flex; flex-direction:column; gap:7px; margin-top:8px;">
+                            <button class="btn btn-success btn-block" onclick="submitDoctorDecision('CONFIRMED REFERRAL')">
+                                ✅ CONFIRM REFERRAL
+                            </button>
+                            <button class="btn btn-primary btn-block" onclick="submitDoctorDecision('ROUTINE FOLLOW-UP')">
+                                📋 MARK FOR FOLLOW-UP
+                            </button>
+                            <button class="btn btn-amber btn-block" onclick="submitDoctorDecision('REQUEST RECAPTURE')">
+                                📷 REQUEST RECAPTURE
+                            </button>
+                            <button class="btn btn-secondary btn-block" onclick="submitDoctorDecision('REQUEST RECERTIFICATION')">
+                                🔄 REQUEST RECERTIFICATION
+                            </button>
+                        </div>
+
+                        <!-- Audit Trail -->
+                        <div id="decision-audit-trail" style="font-size:0.76rem; color:var(--text-muted); margin-top:10px; text-align:right; border-top:1px solid var(--border-color); padding-top:8px;">
+                            --
+                        </div>
+
+                        <!-- PDF Download -->
+                        <div style="margin-top:12px; border-top:1px solid var(--border-color); padding-top:12px;">
+                            <button id="btn-pdf-doc" class="btn btn-secondary btn-block" onclick="downloadPdfReport()" style="font-size:0.83rem;">
+                                📄 Download Screening Report (PDF)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================= -->
+        <!-- SCREEN 3: RESOURCE SIMULATION DASHBOARD                       -->
+        <!-- ============================================================= -->
+        <section id="screen-sim" class="screen-view">
+            <div class="card" style="border-left:4px solid var(--emerald-primary); margin-bottom:18px;">
+                <div style="font-size:1.2rem; font-weight:800; color:var(--navy-dark);">
+                    Deployment & Resource Simulation Dashboard
+                </div>
+                <div style="font-size:0.87rem; color:var(--text-secondary); margin-top:3px;">
+                    Simulates discrete-event queuing model for rural PHC screening workflows.
+                    Analyzes patient arrival surges, portable camera bottlenecks, image rejection/recapture loops,
+                    cellular upload bandwidth, and tele-ophthalmology queue lengths.
+                </div>
+            </div>
+
+            <!-- SIMULATION DEMO NOTICE -->
+            <div class="sim-demo-badge">
+                ⚠️ SIMULATION DEMO — Python discrete-event model. <strong>Awaiting MATLAB/Simulink SimEvents integration</strong>
+                (<code>simulink/rural_dr_screening_model.m</code>).
+            </div>
+
+            <!-- Simulation Parameters -->
+            <div class="card">
+                <div class="card-title">1. Rural Deployment Parameters & Workload Configuration</div>
+                <div class="grid-3">
+                    <div class="slider-group">
+                        <div class="slider-header"><span>Patient Arrival Rate (patients/hr)</span><span id="val-arrival">18</span></div>
+                        <input type="range" class="range-slider" id="slider-arrival" min="5" max="40" value="18" oninput="updateSliderVal('arrival')">
+                    </div>
+                    <div class="slider-group">
+                        <div class="slider-header"><span>Number of Portable Cameras</span><span id="val-cameras">2</span></div>
+                        <input type="range" class="range-slider" id="slider-cameras" min="1" max="5" value="2" oninput="updateSliderVal('cameras')">
+                    </div>
+                    <div class="slider-group">
+                        <div class="slider-header"><span>Telemedicine Bandwidth (Mbps)</span><span id="val-bandwidth">4.0</span></div>
+                        <input type="range" class="range-slider" id="slider-bandwidth" min="0.5" max="25.0" step="0.5" value="4.0" oninput="updateSliderVal('bandwidth')">
+                    </div>
+                    <div class="slider-group">
+                        <div class="slider-header"><span>AI Edge Unit Throughput (cases/hr)</span><span id="val-ai-cap">60</span></div>
+                        <input type="range" class="range-slider" id="slider-ai-cap" min="20" max="120" step="5" value="60" oninput="updateSliderVal('ai-cap')">
+                    </div>
+                    <div class="slider-group">
+                        <div class="slider-header"><span>Tele-Ophthalmologists on Duty</span><span id="val-doctors">1</span></div>
+                        <input type="range" class="range-slider" id="slider-doctors" min="1" max="4" value="1" oninput="updateSliderVal('doctors')">
+                    </div>
+                    <div class="slider-group">
+                        <div class="slider-header"><span>Doctor Review Speed (cases/hr/doc)</span><span id="val-doc-cap">15</span></div>
+                        <input type="range" class="range-slider" id="slider-doc-cap" min="5" max="30" value="15" oninput="updateSliderVal('doc-cap')">
+                    </div>
+                    <div class="slider-group">
+                        <div class="slider-header"><span>Quality Gate Rejection Rate (%)</span><span id="val-rejection">12.0</span></div>
+                        <input type="range" class="range-slider" id="slider-rejection" min="2.0" max="30.0" step="1.0" value="12.0" oninput="updateSliderVal('rejection')">
+                    </div>
+                    <div class="slider-group">
+                        <div class="slider-header"><span>Clinical Shift Duration (hours)</span><span id="val-duration">8.0</span></div>
+                        <input type="range" class="range-slider" id="slider-duration" min="4.0" max="12.0" step="1.0" value="8.0" oninput="updateSliderVal('duration')">
+                    </div>
+                    <div style="display:flex; align-items:flex-end;">
+                        <button class="btn btn-success btn-block" style="padding:11px; font-size:0.97rem;" onclick="executeSimulation()">
+                            ▶️ RUN SIMULATION
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- KPI Telemetry Cards -->
+            <div class="grid-4" style="margin-bottom:18px;">
+                <div class="telemetry-card"><div class="telemetry-val" id="sim-kpi-arrivals">--</div><div class="telemetry-lbl">Total Patient Arrivals</div></div>
+                <div class="telemetry-card"><div class="telemetry-val" id="sim-kpi-hourly-capture">--</div><div class="telemetry-lbl">Images Captured / Hour</div></div>
+                <div class="telemetry-card"><div class="telemetry-val" id="sim-kpi-rejection" style="color:var(--amber-dark);">--</div><div class="telemetry-lbl">Image Rejection Rate</div></div>
+                <div class="telemetry-card"><div class="telemetry-val" id="sim-kpi-doc-done" style="color:var(--emerald-primary);">--</div><div class="telemetry-lbl">Doctor Reviews Completed</div></div>
+                <div class="telemetry-card"><div class="telemetry-val" id="sim-kpi-wait">--</div><div class="telemetry-lbl">Avg Patient Waiting Time</div></div>
+                <div class="telemetry-card"><div class="telemetry-val" id="sim-kpi-referrals" style="color:var(--crimson-dark);">--</div><div class="telemetry-lbl">Referable DR Detected</div></div>
+                <div class="telemetry-card"><div class="telemetry-val" id="sim-kpi-recaptured">--</div><div class="telemetry-lbl">Recaptured On-Site</div></div>
+                <div class="telemetry-card"><div class="telemetry-val" id="sim-kpi-backlog" style="color:var(--blue-clinical);">--</div><div class="telemetry-lbl">Final Doctor Queue Backlog</div></div>
+            </div>
+
+            <!-- Bottleneck Alert -->
+            <div id="sim-bottleneck-alert" style="background:#f8fafc; border:1px solid var(--border-color); border-left:4px solid var(--blue-clinical); border-radius:6px; padding:12px 16px; margin-bottom:16px; font-weight:600; font-size:0.93rem;">
+                System Operational Status: Evaluating...
+            </div>
+
+            <!-- Bottleneck Recommendations -->
+            <div id="sim-recommendations" class="card" style="display:none;">
+                <div class="card-title">Bottleneck Recommendations</div>
+                <ul id="sim-rec-list" style="list-style:none; padding:0; margin:0;">
+                </ul>
+            </div>
+
+            <!-- Charts -->
+            <div class="grid-2" style="margin-bottom:18px;">
+                <div class="card">
+                    <div class="card-title">2. Patient Arrivals vs. Camera Intake Queue</div>
+                    <div style="height:270px; position:relative;"><canvas id="chart-arrivals"></canvas></div>
+                </div>
+                <div class="card">
+                    <div class="card-title">3. Doctor Priority Queue & Waiting Time</div>
+                    <div style="height:270px; position:relative;"><canvas id="chart-queue"></canvas></div>
+                </div>
+            </div>
+
+            <!-- Resource Utilization -->
+            <div class="card">
+                <div class="card-title">4. Healthcare Resource Utilization Breakdown</div>
+                <div class="grid-3">
+                    <div>
+                        <div style="display:flex; justify-content:space-between; font-size:0.84rem; font-weight:700;">
+                            <span>Portable Fundus Cameras</span><span id="lbl-util-cam">0%</span>
+                        </div>
+                        <div class="progress-bar-bg"><div class="progress-bar-fill" id="bar-util-cam" style="width:0%; background-color:var(--blue-clinical);"></div></div>
+                    </div>
+                    <div>
+                        <div style="display:flex; justify-content:space-between; font-size:0.84rem; font-weight:700;">
+                            <span>Edge AI Inference Unit</span><span id="lbl-util-ai">0%</span>
+                        </div>
+                        <div class="progress-bar-bg"><div class="progress-bar-fill" id="bar-util-ai" style="width:0%; background-color:var(--emerald-primary);"></div></div>
+                    </div>
+                    <div>
+                        <div style="display:flex; justify-content:space-between; font-size:0.84rem; font-weight:700;">
+                            <span>Tele-Ophthalmologist Duty</span><span id="lbl-util-doc">0%</span>
+                        </div>
+                        <div class="progress-bar-bg"><div class="progress-bar-fill" id="bar-util-doc" style="width:0%; background-color:var(--crimson-primary);"></div></div>
+                    </div>
+                </div>
+
+                <div style="margin-top:20px; border-top:1px solid var(--border-color); padding-top:12px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                    <div style="font-size:0.84rem; color:var(--text-secondary);">
+                        Compatible with MATLAB <code>jsondecode(...)</code> and Simulink SimEvents blocks.
+                    </div>
+                    <button class="btn btn-secondary" onclick="exportSimulationJson()">
+                        📥 Download Simulation JSON Dataset
+                    </button>
+                </div>
+            </div>
+
+            <!-- System Architecture Panel -->
+            <div class="card">
+                <div class="card-title">5. System Architecture & Technology Stack</div>
+                <ul class="arch-list" id="arch-pipeline-list">
+                    <li><span class="arch-step-num">01</span><span>IMAGE ACQUISITION — Fundus Camera / DICOM Export / Manual Upload</span></li>
+                    <li><span class="arch-step-num">02</span><span>QUALITY GATE — Laplacian Focus Score, Illumination (0–255), FOV Coverage, Artifact Check</span></li>
+                    <li><span class="arch-step-num">03</span><span>IMAGE ENHANCEMENT — CLAHE, Green-Channel Contrast, Unsharp Masking (OpenCV + PIL)</span></li>
+                    <li><span class="arch-step-num">04</span><span>RETINAL ANALYSIS — NetraNet CNN Forward Pass (PyTorch 2.x, CPU/GPU)</span></li>
+                    <li><span class="arch-step-num">05</span><span>DR GRADING — Binary: NON-REFERABLE / REFERABLE → ICDR 0–4 Demo Label Mapping</span></li>
+                    <li><span class="arch-step-num">06</span><span>EXPLAINABILITY — Grad-CAM Spatial Attribution (conv4 hook) — Real model attention visualization</span></li>
+                    <li><span class="arch-step-num">07</span><span>TRIAGE — High Priority / Routine Queue Assignment → JSON persistence (state_manager.py)</span></li>
+                    <li><span class="arch-step-num">08</span><span>DOCTOR REVIEW — Tele-Ophthalmologist Decision Dashboard (FastAPI + SPA)</span></li>
+                    <li><span class="arch-step-num">09</span><span>RESOURCE SIMULATION — Python Discrete-Event Model (Awaiting MATLAB/Simulink integration)</span></li>
+                </ul>
+            </div>
+
+            <!-- Rural Connectivity Panel -->
+            <div class="card">
+                <div class="card-title">6. Rural Connectivity & Edge Deployment Profile</div>
+                <div class="grid-3">
+                    <div class="telemetry-card" style="text-align:left; padding:14px;">
+                        <div style="font-size:0.82rem; font-weight:800; color:var(--navy-dark); margin-bottom:8px;">📡 Network Mode</div>
+                        <div style="display:flex; flex-direction:column; gap:6px;">
+                            <div><span class="connectivity-badge connectivity-online">● ONLINE</span> &nbsp;4G LTE (&gt;4 Mbps)</div>
+                            <div><span class="connectivity-badge connectivity-low">● LOW BW</span> &nbsp;2G/3G (1–4 Mbps)</div>
+                            <div><span class="connectivity-badge connectivity-offline">● OFFLINE</span> &nbsp;Edge-Only Mode</div>
+                        </div>
+                    </div>
+                    <div class="telemetry-card" style="text-align:left; padding:14px;">
+                        <div style="font-size:0.82rem; font-weight:800; color:var(--navy-dark); margin-bottom:8px;">🖥️ Edge Compute Profile</div>
+                        <div style="font-size:0.82rem; color:var(--text-secondary);">
+                            <div>Runtime: PyTorch (CPU mode)</div>
+                            <div>Model Size: ~lightweight CNN</div>
+                            <div>Inference: &lt;500ms on RPi/Laptop</div>
+                            <div>Storage: Local JSON queue</div>
+                        </div>
+                    </div>
+                    <div class="telemetry-card" style="text-align:left; padding:14px;">
+                        <div style="font-size:0.82rem; font-weight:800; color:var(--navy-dark); margin-bottom:8px;">📦 Offline Capability</div>
+                        <div style="font-size:0.82rem; color:var(--text-secondary);">
+                            <div>Quality Gate: ✅ Fully offline</div>
+                            <div>AI Screening: ✅ Fully offline</div>
+                            <div>Grad-CAM: ✅ Fully offline</div>
+                            <div>Tele-review: Requires connectivity</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Safety & Regulatory Disclaimer Footer -->
+    <footer class="safety-footer">
+        <div><strong>NETRADRISHTI — Smart India Hackathon 2026 (Problem Statement: SIH26038)</strong></div>
+        <div style="margin-top:4px; font-size:0.81rem;">
+            Research prototype — AI output requires ophthalmologist review. Not a clinically certified medical diagnostic system.
+            All final clinical decisions belong to licensed clinicians. Model confidence values are real softmax outputs from NetraNet trained on synthetic data.
+        </div>
+    </footer>
+
+    <!-- App Logic Script -->
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
